@@ -77,49 +77,50 @@ class Recurring(object):
         auth = etree.SubElement(root, "merchantAuthentication")
         etree.SubElement(auth, "name").text = self.login
         etree.SubElement(auth, "transactionKey").text = self.key
-        subscription = etree.SubElement(root, 'subscription')
-        if self.schedule:
-            (start, total, count, unit) = self.schedule
-            schedule = etree.SubElement(subscription, 'paymentSchedule')
-            interval = etree.SubElement(schedule, 'interval')
-            etree.SubElement(interval, 'length').text = str(count)
-            etree.SubElement(interval, 'unit').text = str(unit)
-            etree.SubElement(schedule, 'startDate').text = start.strftime('%Y-%m-%d')
-            if self.trial:
-                total += self.trial[0]
-                etree.SubElement(schedule, 'trialOccurrences').text = str(self.trial[0])
-            etree.SubElement(schedule, 'totalOccurrences').text = str(total)
-        if self.amount:
-            etree.SubElement(subscription, 'amount').text = str(self.amount)
-        if self.trial:
-            etree.SubElement(subscription, 'trialAmount').text = str(self.trial[1])
-        if self.payment:
-            type = self.payment[0]
-            if type == TYPE_CREDIT:
-                (card_num, card_exp) = self.payment[1]
-                payment = etree.SubElement(subscription, 'payment')
-                credit = etree.SubElement(payment, 'creditCard')
-                etree.SubElement(credit, 'cardNumber').text = card_num
-                etree.SubElement(credit, 'expirationDate').text = '%s-%s' % card_exp
-        if self.customer:
-            (first_name, last_name, company, address, city, state, zip, country) = self.customer
-            customer = etree.SubElement(subscription, 'billTo')
-            etree.SubElement(customer, 'firstName').text = first_name
-            etree.SubElement(customer, 'lastName').text = last_name
-            if company:
-                etree.SubElement(customer, 'company').text = company
-            if address:
-                etree.SubElement(customer, 'address').text = address
-            if city:
-                etree.SubElement(customer, 'city').text = city
-            if state:
-                etree.SubElement(customer, 'state').text = state
-            if zip:
-                etree.SubElement(customer, 'zip').text = zip
-            if country:
-                etree.SubElement(customer, 'country').text = country
         if self.subscription_id:
-            etree.SubElement(subscription, 'subscriptionId').text = self.subscription_id
+            etree.SubElement(root, 'subscriptionId').text = self.subscription_id
+        if requestType != 'ARBCancelSubscriptionRequest':
+            subscription = etree.SubElement(root, 'subscription')
+            if self.schedule:
+                (start, total, count, unit) = self.schedule
+                schedule = etree.SubElement(subscription, 'paymentSchedule')
+                interval = etree.SubElement(schedule, 'interval')
+                etree.SubElement(interval, 'length').text = str(count)
+                etree.SubElement(interval, 'unit').text = str(unit)
+                etree.SubElement(schedule, 'startDate').text = start.strftime('%Y-%m-%d')
+                if self.trial:
+                    total += self.trial[0]
+                    etree.SubElement(schedule, 'trialOccurrences').text = str(self.trial[0])
+                etree.SubElement(schedule, 'totalOccurrences').text = str(total)
+            if self.amount:
+                etree.SubElement(subscription, 'amount').text = str(self.amount)
+            if self.trial:
+                etree.SubElement(subscription, 'trialAmount').text = str(self.trial[1])
+            if self.payment:
+                type = self.payment[0]
+                if type == TYPE_CREDIT:
+                    (card_num, card_exp) = self.payment[1]
+                    payment = etree.SubElement(subscription, 'payment')
+                    credit = etree.SubElement(payment, 'creditCard')
+                    etree.SubElement(credit, 'cardNumber').text = card_num
+                    etree.SubElement(credit, 'expirationDate').text = '%s-%s' % card_exp
+            if self.customer:
+                (first_name, last_name, company, address, city, state, zip, country) = self.customer
+                customer = etree.SubElement(subscription, 'billTo')
+                etree.SubElement(customer, 'firstName').text = first_name
+                etree.SubElement(customer, 'lastName').text = last_name
+                if company:
+                    etree.SubElement(customer, 'company').text = company
+                if address:
+                    etree.SubElement(customer, 'address').text = address
+                if city:
+                    etree.SubElement(customer, 'city').text = city
+                if state:
+                    etree.SubElement(customer, 'state').text = state
+                if zip:
+                    etree.SubElement(customer, 'zip').text = zip
+                if country:
+                    etree.SubElement(customer, 'country').text = country
         return etree.tostring(root, xml_declaration=True, encoding='utf-8')
 
     def _fromXml(self, response):
@@ -131,10 +132,12 @@ class Recurring(object):
         messages = root.find('messages')
         result_code = messages.find('resultCode').text
         if result_code == 'Error':
-            message = messages.find('message')
-            raise Exception('%s - %s' % (message.find('code').text, message.find('text').text))
+            code = messages.find('message/code')
+            text = messages.find('message/text')
+            raise Exception('%s - %s' % (code.text, text.text))
         if result_code == 'Ok':
-            return root.find('subscriptionId').text
+            if root.tag == 'ARBCreateSubscriptionResponse':
+                return root.find('subscriptionId').text
 
     def create(self):
         xml = self._toXml('ARBCreateSubscriptionRequest')
@@ -153,11 +156,17 @@ class Recurring(object):
 
 if __name__ == '__main__':
     import sys, pdb
+    #create = Recurring(HOST_PROD, sys.argv[1], sys.argv[2])
+    #create.add_schedule()
+    #create.add_amount('10.00')
+    #create.add_credit('4427802718148774', ('2010', '03'))
+    #create.add_customer('john', 'smith')
+    #create.create()
+    #update = Recurring(HOST_PROD, sys.argv[1], sys.argv[2])
+    #update.add_subscription_id('3661311')
+    #update.add_amount('20.00')
+    #update.update()
     pdb.set_trace()
-    test = Recurring(HOST_PROD, sys.argv[1], sys.argv[2])
-    test.add_schedule()
-    test.add_amount('10.00')
-    test.add_credit('4427802718148774', ('2010', '03'))
-    test.add_customer('john', 'smith')
-    test.create()
-    print test.subscription_id
+    cancel = Recurring(HOST_PROD, sys.argv[1], sys.argv[2])
+    cancel.add_subscription_id('3661311')
+    cancel.cancel()
