@@ -11,13 +11,13 @@ PERIOD_ONGOING = 9999
 HOST_PROD = 'api.authorize.net'
 HOST_TEST = 'apitest.authorize.net'
 PATH = '/xml/v1/request.api'
+ANET_XMLNS = ' xmlns="AnetApi/xml/v1/schema/AnetApiSchema.xsd"'
 
 class AuthorizeNet(object):
     def __init__(self, host):
         self.host = host
 
     def send(self, data):
-        #data = urllib.quote(data)
         conn = httplib.HTTPSConnection(self.host)
         conn.putrequest('POST', PATH)
         conn.putheader('content-type', 'text/xml')
@@ -124,7 +124,7 @@ class Recurring(object):
     def _fromXml(self, response):
         #TODO: investigate why etree will not parse this document when this namespace definition is intact.
         # for now just remove it :-)
-        response = response.replace(' xmlns="AnetApi/xml/v1/schema/AnetApiSchema.xsd"', '')
+        response = response.replace(ANET_XMLNS, '')
         root = etree.XML(response)
 
         messages = root.find('messages')
@@ -148,12 +148,11 @@ class Recurring(object):
         self._fromXml(response)
 
 if __name__ == '__main__':
-    import sys
-    test = Recurring(HOST_TEST, sys.argv[1], sys.argv[2])
+    import sys, pdb
+    pdb.set_trace()
+    test = Recurring(HOST_PROD, sys.argv[1], sys.argv[2])
     test.add_schedule()
     test.add_amount('10.00')
     test.add_credit('1111111111111111', ('2010', '03'))
     test.add_customer('ben', 'timby')
-    import pdb; pdb.set_trace()
     test.create()
-    print test._toXml('ARBCreateSubscriptionRequest')
