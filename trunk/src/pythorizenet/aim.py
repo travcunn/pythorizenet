@@ -1,0 +1,196 @@
+##############################################################################
+#
+# Copyright (c) 2004 Zope Corporation and Contributors.
+# All Rights Reserved.
+#
+# This software is subject to the provisions of the Zope Public License,
+# Version 2.1 (ZPL).  A copy of the ZPL should accompany this distribution.
+# THIS SOFTWARE IS PROVIDED "AS IS" AND ANY AND ALL EXPRESS OR IMPLIED
+# WARRANTIES ARE DISCLAIMED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF TITLE, MERCHANTABILITY, AGAINST INFRINGEMENT, AND FITNESS
+# FOR A PARTICULAR PURPOSE.
+#
+##############################################################################
+
+import httplib
+import urllib
+import md5
+
+TYPE_CREDIT = 'credit'
+FIELD_DELIM = '|'
+RESPONSE_CODES = {
+    '1': 'approved',
+    '2': 'declined',
+    '3': 'error',
+    '4': 'held for review'
+}
+TESTING_PREFIX = '(TESTMODE) '
+AMEX = 'AMEX'
+DISCOVER = 'Discover'
+MASTERCARD = 'MasterCard'
+VISA = 'Visa'
+UNKNOWN_CARD_TYPE = 'Unknown'
+HOST_PROD = 'secure.authorize.net'
+
+def identify_card_type(card_num, card_len):
+    card_type = UNKNOWN_CARD_TYPE
+    card_1_digit = card_num[0]
+    card_2_digits = card_num[:2]
+    card_4_digits = card_num[:4]
+    if (card_len == 15) and card_2_digits in ('34', '37'):
+        card_type = AMEX
+    elif card_len == 16:
+        if card_2_digits in ('51', '52', '53', '54', '55'):
+            card_type = MASTERCARD
+        elif (card_4_digits == '6011') or (card_2_digits == '65'):
+            card_type = DISCOVER
+        elif (card_1_digit == '4'):
+            card_type = VISA
+    elif (card_len == 13) and (card_1_digit == '4'):
+        card_type = VISA
+    return card_type
+
+class TransactionResult(object):
+    def __init__(self, data, delim=FIELD_DELIM):
+        fields = data.split(delim)
+        self.response_code = fields[0]
+        self.response = RESPONSE_CODES[self.response_code]
+        self.response_reason_code = fields[2]
+        self.response_reason = fields[3]
+        if self.response_reason.startswith(TESTING_PREFIX):
+            self.test = True
+            self.response_reason = self.response_reason.replace(TESTING_PREFIX, '')
+        else:
+            self.test = False
+        self.approval_code = fields[4]
+        self.trans_id = fields[6]
+        self.amount = fields[9]
+        self.hash = fields[37]
+        self.card_type = None
+
+    def validate(self, login, salt):
+        value = ''.join([salt, login, self.trans_id, self.amount])
+        return self.hash.upper() == md5.new(value).hexdigest().upper()
+
+class Transaction(object):
+    def __init__(self, host, login, key):
+        self.conn = AuthorizeNet(host, '/gateway/transact.dll', 'application/x-www-form-urlencoded')
+        self.login = login
+        self.key = key
+        self.delimiter = FIELD_DELIM
+        self.amount = None
+        self.payment = None
+        self.customer = None
+        self.options = object()
+        self.add_options()
+
+    def add_amount(self, amount):
+        if not isinstance(amount, str):
+            raise Exception('You must provide the amount as a string!')
+        self.amount = amount
+
+    def add_credit(self, card_num, card_exp, card_code=None):
+        if not isinstance(card_exp, (tuple, list)):
+            raise Exception('card_exp must be a tuple or list!')
+        if len(card_exp) != 2:
+            raise Exception('card_exp must contain two items (year and month)!')
+        if len(card_exp[0]) != 4:
+            raise Exception('First item of card_exp must be year as YYYY!')
+        if len(card_exp[1]) != 2:
+            raise Exception('Second item of card_exp must be month as MM!')
+        self.payment = (TYPE_CREDIT, card_num, card_exp, card_code)
+
+    def add_customer(self, first_name, last_name, company=None, address=None, city=None, state=None, zip=None):
+        self.customer = (first_name, last_name, company, address, city, state, zip)
+
+    def add_transaction(self, id):
+        self.trans_id = id
+
+    def add_options(self, is_test=False, require_ccv=False, require_avs=False):
+        setattr(self.options, 'is_test', is_test)
+        setattr(self.options, 'require_ccv', require_ccv)
+        setattr(self.options, 'require_avs', require_avs)
+
+    def _toPost(self, requestType):
+        post = {
+            'x_login': self.login,
+            'x_tran_key': self.key,
+            'x_version': '3.1',
+            'x_type': requestType,
+            'x_recurring_billing': 'NO',
+            'x_delim_data': 'TRUE'
+            'x_delim_char': self.delimiter,
+            'x_relay_response': 'FALSE',
+        }
+        if self.amount:
+            post['x_amount'] = self.amount
+        if self.payment[0] == TYPE_CREDIT:
+            post['x_method'] = 'CC'
+        if self.payment:
+            type, card_num, exp_date, ccv = self.payment
+            post.update(
+                {
+                    'x_card_num': card_num,
+                    'x_exp_date': '%s-%s' % exp_date
+                }
+            if self.options.require_ccv:
+                if not ccv:
+                    raise Exception('CCV required by options but not provided!')
+                post['x_card_code'] = ccv
+            )
+        if self.options.is_test:
+            post['x_test_request'] = 'YES'
+        if requestType in ('CREDIT', 'PRIOR_AUTH_CAPTURE', 'VOID'):
+            if not self.trans_id:
+                raise Exception('You must provide a trans_id for %s transactions!' % requestType)
+            post['x_trans_id'] = self.trans_id
+        if self.customer:
+            (first_name, last_name, company, address, city, state, zip) = self.customer
+            post['x_first_name'] = first_name
+            post['x_last_name'] = last_name
+            if self.options.require_avs:
+                if not (address and city and state and zip):
+                    raise Exception('AVS required by options but no customer data provided!')
+                if company:
+                    post['x_company'] = company
+                if address:
+                    post['x_address'] = address
+                if city:
+                    post['x_city'] = city
+                if state:
+                    post['x_state'] = state
+                if zip:
+                    post['x_zip'] = zip
+        return urllib.urlencode(post)
+
+    def _fromPost(self, data):
+        return TransactionResult(data, self.delimiter)
+
+    def authorize(self):
+        data = self._toPost('AUTH_ONLY')
+        response = self.conn.send(data)
+        return self._fromPost(response)
+
+    def capture(self):
+        data = self._toPost('CAPTURE_PRIOR_AUTH')
+        response = self.conn.send(data)
+        return self._fromPost(response)
+
+    def credit(self):
+        pass
+
+    def void(self):
+        pass
+
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        print 'You must provide your login and trans id as parameters!'
+        sys.exit()
+    import pdb; pdb.set_trace()
+    trans = Transaction(HOST_PROD, sys.argv[1], sys.argv[2])
+    trans.add_amount('10.00')
+    trans.add_credit('1879237823782377', ('2010', '03'))
+    trans.add_customer('john', 'smith')
+    result = trans.authorize()
+    print result.trans_id
+    

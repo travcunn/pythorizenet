@@ -1,5 +1,6 @@
-import httplib, urllib, datetime
+import datetime
 from lxml import etree
+from comm import AuthorizeNet
 
 UNIT_MONTH = 'months'
 UNIT_DAYS = 'days'
@@ -13,24 +14,9 @@ HOST_TEST = 'apitest.authorize.net'
 PATH = '/xml/v1/request.api'
 ANET_XMLNS = ' xmlns="AnetApi/xml/v1/schema/AnetApiSchema.xsd"'
 
-class AuthorizeNet(object):
-    def __init__(self, host):
-        self.host = host
-
-    def send(self, data):
-        conn = httplib.HTTPSConnection(self.host)
-        conn.putrequest('POST', PATH)
-        conn.putheader('content-type', 'text/xml')
-        conn.putheader('content-length', len(data))
-        conn.endheaders()
-        conn.send(data)
-
-        response = conn.getresponse()
-        return response.read()
-
 class Recurring(object):
     def __init__(self, host, login, key):
-        self.conn = AuthorizeNet(host)
+        self.conn = AuthorizeNet(host, PATH, 'text/xml')
         self.login = login
         self.key = key
         self.schedule = None
@@ -155,8 +141,11 @@ class Recurring(object):
         self._fromXml(response)
 
 if __name__ == '__main__':
-    import sys, pdb
-    pdb.set_trace()
+    import sys
+    if len(sys.argv) != 3:
+        print 'You must provide your login and trans id as parameters!'
+        sys.exit()
+    import pdb; pdb.set_trace()
     create = Recurring(HOST_PROD, sys.argv[1], sys.argv[2])
     create.add_schedule()
     create.add_amount('10.00')
