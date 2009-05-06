@@ -20,7 +20,8 @@ UNKNOWN_CARD_TYPE = 'Unknown'
 HOST_PROD = 'secure.authorize.net'
 HOST_TEST = 'test.authorize.net'
 
-def identify_card_type(card_num, card_len):
+def identify_card_type(card_num):
+    card_len = len(card_num)
     card_type = UNKNOWN_CARD_TYPE
     card_1_digit = card_num[0]
     card_2_digits = card_num[:2]
@@ -41,9 +42,9 @@ def identify_card_type(card_num, card_len):
 class TransactionResult(object):
     def __init__(self, data, delim=FIELD_DELIM):
         fields = data.split(delim)
-        self.code = fields[0]
-        self.type = RESPONSE_CODES[self.code]
-        self.subcode = fields[2]
+        self.code = int(fields[0])
+        self.type = RESPONSE_CODES[fields[0]]
+        self.subcode = int(fields[2])
         self.reason = fields[3]
         if self.reason.startswith(TESTING_PREFIX):
             self.test = True
@@ -87,9 +88,11 @@ class Transaction(object):
             raise Exception('card_exp must contain two items (year and month)!')
         if len(card_exp[0]) != 4:
             raise Exception('First item of card_exp must be year as YYYY!')
-        if len(card_exp[1]) != 2:
+        if len(card_exp[1]) == 1:
+            card_exp[1] = '0' + card_exp[1]
+        elif len(card_exp[1]) > 2:
             raise Exception('Second item of card_exp must be month as MM!')
-        self.payment = (TYPE_CREDIT, card_num, card_exp, card_code)
+        self.payment = (TYPE_CREDIT, card_num, tuple(card_exp), card_code)
 
     def add_customer(self, first_name, last_name, company=None, address=None, city=None, state=None, zip=None):
         self.customer = (first_name, last_name, company, address, city, state, zip)
