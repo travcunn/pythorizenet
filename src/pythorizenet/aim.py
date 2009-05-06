@@ -1,17 +1,4 @@
-##############################################################################
-#
-# Copyright (c) 2004 Zope Corporation and Contributors.
-# All Rights Reserved.
-#
-# This software is subject to the provisions of the Zope Public License,
-# Version 2.1 (ZPL).  A copy of the ZPL should accompany this distribution.
-# THIS SOFTWARE IS PROVIDED "AS IS" AND ANY AND ALL EXPRESS OR IMPLIED
-# WARRANTIES ARE DISCLAIMED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF TITLE, MERCHANTABILITY, AGAINST INFRINGEMENT, AND FITNESS
-# FOR A PARTICULAR PURPOSE.
-#
-##############################################################################
-
+from com import AuthorizeNet
 import httplib
 import urllib
 import md5
@@ -31,6 +18,7 @@ MASTERCARD = 'MasterCard'
 VISA = 'Visa'
 UNKNOWN_CARD_TYPE = 'Unknown'
 HOST_PROD = 'secure.authorize.net'
+HOST_TEST = 'test.authorize.net'
 
 def identify_card_type(card_num, card_len):
     card_type = UNKNOWN_CARD_TYPE
@@ -53,26 +41,29 @@ def identify_card_type(card_num, card_len):
 class TransactionResult(object):
     def __init__(self, data, delim=FIELD_DELIM):
         fields = data.split(delim)
-        self.response_code = fields[0]
-        self.response = RESPONSE_CODES[self.response_code]
-        self.response_reason_code = fields[2]
-        self.response_reason = fields[3]
-        if self.response_reason.startswith(TESTING_PREFIX):
+        self.code = fields[0]
+        self.type = RESPONSE_CODES[self.code]
+        self.subcode = fields[2]
+        self.reason = fields[3]
+        if self.reason.startswith(TESTING_PREFIX):
             self.test = True
-            self.response_reason = self.response_reason.replace(TESTING_PREFIX, '')
+            self.reason = self.reason.replace(TESTING_PREFIX, '')
         else:
             self.test = False
-        self.approval_code = fields[4]
-        self.trans_id = fields[6]
+        self.approval = fields[4]
+        self.transaction_id = fields[6]
         self.amount = fields[9]
         self.hash = fields[37]
         self.card_type = None
 
     def validate(self, login, salt):
-        value = ''.join([salt, login, self.trans_id, self.amount])
+        value = ''.join([salt, login, self.transaction_id, self.amount])
         return self.hash.upper() == md5.new(value).hexdigest().upper()
 
 class Transaction(object):
+    class Options(object):
+        pass
+
     def __init__(self, host, login, key):
         self.conn = AuthorizeNet(host, '/gateway/transact.dll', 'application/x-www-form-urlencoded')
         self.login = login
@@ -81,7 +72,7 @@ class Transaction(object):
         self.amount = None
         self.payment = None
         self.customer = None
-        self.options = object()
+        self.options = Transaction.Options()
         self.add_options()
 
     def add_amount(self, amount):
@@ -118,26 +109,26 @@ class Transaction(object):
             'x_version': '3.1',
             'x_type': requestType,
             'x_recurring_billing': 'NO',
-            'x_delim_data': 'TRUE'
+            'x_delim_data': 'TRUE',
             'x_delim_char': self.delimiter,
             'x_relay_response': 'FALSE',
         }
         if self.amount:
             post['x_amount'] = self.amount
-        if self.payment[0] == TYPE_CREDIT:
-            post['x_method'] = 'CC'
         if self.payment:
+            if self.payment[0] == TYPE_CREDIT:
+                post['x_method'] = 'CC'
             type, card_num, exp_date, ccv = self.payment
             post.update(
                 {
                     'x_card_num': card_num,
                     'x_exp_date': '%s-%s' % exp_date
                 }
+            )
             if self.options.require_ccv:
                 if not ccv:
                     raise Exception('CCV required by options but not provided!')
                 post['x_card_code'] = ccv
-            )
         if self.options.is_test:
             post['x_test_request'] = 'YES'
         if requestType in ('CREDIT', 'PRIOR_AUTH_CAPTURE', 'VOID'):
@@ -183,14 +174,16 @@ class Transaction(object):
         pass
 
 if __name__ == '__main__':
+    import sys
     if len(sys.argv) != 3:
         print 'You must provide your login and trans id as parameters!'
         sys.exit()
     import pdb; pdb.set_trace()
     trans = Transaction(HOST_PROD, sys.argv[1], sys.argv[2])
+    trans.add_options(is_test=True)
     trans.add_amount('10.00')
     trans.add_credit('1879237823782377', ('2010', '03'))
     trans.add_customer('john', 'smith')
     result = trans.authorize()
-    print result.trans_id
+    print result.transaction_id
     

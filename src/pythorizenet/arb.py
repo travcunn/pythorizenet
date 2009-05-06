@@ -1,6 +1,6 @@
 import datetime
 from lxml import etree
-from comm import AuthorizeNet
+from com import AuthorizeNet
 
 UNIT_MONTH = 'months'
 UNIT_DAYS = 'days'
