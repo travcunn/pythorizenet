@@ -14,6 +14,16 @@ HOST_TEST = 'apitest.authorize.net'
 PATH = '/xml/v1/request.api'
 ANET_XMLNS = ' xmlns="AnetApi/xml/v1/schema/AnetApiSchema.xsd"'
 
+class RecurringResult:
+    def __init__(self, data):
+        root = etree.XML(data)
+        messages = root.find('messages')
+        self.code = messages.find('message/code').text
+        self.reason = messages.find('message/text').text
+        self.subscription_id = None
+        if root.tag == 'ARBCreateSubscriptionResponse' and self.code == 'Ok':
+            self.subscription_id = root.find('subscriptionId').text
+
 class Recurring(object):
     def __init__(self, host, login, key):
         self.conn = AuthorizeNet(host, PATH, 'text/xml')
@@ -48,9 +58,11 @@ class Recurring(object):
             raise Exception('card_exp must contain two items (year and month)!')
         if len(card_exp[0]) != 4:
             raise Exception('First item of card_exp must be year as YYYY!')
-        if len(card_exp[1]) != 2:
+        if len(card_exp[1]) == 1:
+            card_exp[1] = '0' + card_exp[1]
+        elif len(card_exp[1]) > 2:
             raise Exception('Second item of card_exp must be month as MM!')
-        self.payment = (TYPE_CREDIT, (card_num, card_exp))
+        self.payment = (TYPE_CREDIT, (card_num, tuple(card_exp)))
 
     def add_customer(self, first_name, last_name, company=None, address=None, city=None, state=None, zip=None, country=None):
         self.customer = (first_name, last_name, company, address, city, state, zip, country)
@@ -113,32 +125,22 @@ class Recurring(object):
         #TODO: investigate why etree will not parse this document when this namespace definition is intact.
         # for now just remove it :-)
         response = response.replace(ANET_XMLNS, '')
-        root = etree.XML(response)
-
-        messages = root.find('messages')
-        result_code = messages.find('resultCode').text
-        if result_code == 'Error':
-            code = messages.find('message/code')
-            text = messages.find('message/text')
-            raise Exception('%s - %s' % (code.text, text.text))
-        if result_code == 'Ok':
-            if root.tag == 'ARBCreateSubscriptionResponse':
-                return root.find('subscriptionId').text
+        return RecurringResult(response)
 
     def create(self):
         xml = self._toXml('ARBCreateSubscriptionRequest')
         response = self.conn.send(xml)
-        self.subscription_id = self._fromXml(response)
+        return self._fromXml(response)
 
     def update(self):
         xml = self._toXml('ARBUpdateSubscriptionRequest')
         response = self.conn.send(xml)
-        self._fromXml(response)
+        return self._fromXml(response)
 
     def cancel(self):
         xml = self._toXml('ARBCancelSubscriptionRequest')
         response = self.conn.send(xml)
-        self._fromXml(response)
+        return self._fromXml(response)
 
 if __name__ == '__main__':
     import sys
@@ -152,11 +154,11 @@ if __name__ == '__main__':
     #create.add_credit('4427802718148774', ('2010', '03'))
     create.add_credit('1879237823782377', ('2010', '03'))
     create.add_customer('john', 'smith')
-    create.create()
+    result = create.create()
     update = Recurring(HOST_PROD, sys.argv[1], sys.argv[2])
-    update.add_subscription_id(create.subscription_id)
+    update.add_subscription_id(result.subscription_id)
     update.add_amount('20.00')
     update.update()
     #cancel = Recurring(HOST_PROD, sys.argv[1], sys.argv[2])
-    #cancel.add_subscription_id('3661311')
+    #cancel.add_subscription_id(result.subscription_id)
     #cancel.cancel()
