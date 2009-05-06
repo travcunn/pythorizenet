@@ -18,7 +18,7 @@ def main():
         license                 = "GPL",
         platforms               = "UNIX",
         long_description        = "AIM and ARB API interfaces for performing real-time credit card authorizations/captures as well as automated recurring billing.",
-        packages                = ['pythorize']
+        packages                = ['pythorizenet']
     )
 
 if __name__ == "__main__":
