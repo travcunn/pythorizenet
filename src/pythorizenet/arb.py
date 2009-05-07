@@ -18,10 +18,11 @@ class RecurringResult:
     def __init__(self, data):
         root = etree.XML(data)
         messages = root.find('messages')
+        self.resultCode = messages.find('resultCode').text
         self.code = messages.find('message/code').text
         self.reason = messages.find('message/text').text
         self.subscription_id = None
-        if root.tag == 'ARBCreateSubscriptionResponse' and self.code == 'Ok':
+        if root.tag == 'ARBCreateSubscriptionResponse' and self.resultCode == 'Ok':
             self.subscription_id = root.find('subscriptionId').text
 
 class Recurring(object):
@@ -152,7 +153,7 @@ if __name__ == '__main__':
     create.add_schedule()
     create.add_amount('10.00')
     #create.add_credit('4427802718148774', ('2010', '03'))
-    create.add_credit('1879237823782377', ('2010', '03'))
+    create.add_credit('4222222222222', ('2011', '03'))
     create.add_customer('john', 'smith')
     result = create.create()
     update = Recurring(HOST_PROD, sys.argv[1], sys.argv[2])

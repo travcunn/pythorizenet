@@ -174,7 +174,9 @@ class Transaction(object):
         pass
 
     def void(self):
-        pass
+        data = self._toPost('VOID')
+        response = self.conn.send(data)
+        return self._fromPost(response)
 
 if __name__ == '__main__':
     import sys
@@ -184,9 +186,11 @@ if __name__ == '__main__':
     import pdb; pdb.set_trace()
     trans = Transaction(HOST_PROD, sys.argv[1], sys.argv[2])
     trans.add_options(is_test=True)
-    trans.add_amount('10.00')
-    trans.add_credit('1879237823782377', ('2010', '03'))
+    trans.add_amount('1.00')
+    trans.add_credit('4222222222222', ('2010', '03'))
     trans.add_customer('john', 'smith')
     result = trans.authorize()
-    print result.transaction_id
+    void = Transaction(HOST_PROD, sys.argv[1], sys.argv[2])
+    void.add_transaction(result.transaction_id)
+    result = void.void()
     
