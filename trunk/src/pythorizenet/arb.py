@@ -22,8 +22,9 @@ class RecurringResult:
         self.code = messages.find('message/code').text
         self.reason = messages.find('message/text').text
         self.subscription_id = None
-        if root.tag == 'ARBCreateSubscriptionResponse' and self.resultCode == 'Ok':
-            self.subscription_id = root.find('subscriptionId').text
+        subscription_id = root.find('subscriptionId')
+        if root.tag == 'ARBCreateSubscriptionResponse' and subscription_id is not None:
+            self.subscription_id = subscription_id.text
 
 class Recurring(object):
     def __init__(self, host, login, key):
