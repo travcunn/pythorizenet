@@ -135,7 +135,7 @@ class Transaction(object):
                 post['x_card_code'] = ccv
         if self.options.is_test:
             post['x_test_request'] = 'YES'
-        if self.options.duplicate_window:
+        if self.options.duplicate_window is not None:
             post['x_duplicate_window'] = str(self.options.duplicate_window)
         if requestType in ('CREDIT', 'PRIOR_AUTH_CAPTURE', 'VOID'):
             if not self.trans_id:
