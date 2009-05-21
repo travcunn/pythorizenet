@@ -100,10 +100,11 @@ class Transaction(object):
     def add_transaction(self, id):
         self.trans_id = id
 
-    def add_options(self, is_test=False, require_ccv=False, require_avs=False):
+    def add_options(self, is_test=False, require_ccv=False, require_avs=False, duplicate_window=None):
         setattr(self.options, 'is_test', is_test)
         setattr(self.options, 'require_ccv', require_ccv)
         setattr(self.options, 'require_avs', require_avs)
+        setattr(self.options, 'duplicate_window', duplicate_window)
 
     def _toPost(self, requestType):
         post = {
@@ -134,6 +135,8 @@ class Transaction(object):
                 post['x_card_code'] = ccv
         if self.options.is_test:
             post['x_test_request'] = 'YES'
+        if self.options.duplicate_window:
+            post['x_duplicate_window'] = str(self.options.duplicate_window)
         if requestType in ('CREDIT', 'PRIOR_AUTH_CAPTURE', 'VOID'):
             if not self.trans_id:
                 raise Exception('You must provide a trans_id for %s transactions!' % requestType)
