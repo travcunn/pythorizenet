@@ -173,6 +173,11 @@ class Transaction(object):
         response = self.conn.send(data)
         return self._fromPost(response)
 
+    def auth_capture(self):
+        data = self._toPost('AUTH_CAPTURE')
+        response = self.conn.send(data)
+        return self._fromPost(response)
+
     def credit(self):
         pass
 
