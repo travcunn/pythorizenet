@@ -169,7 +169,7 @@ class Transaction(object):
         return self._fromPost(response)
 
     def capture(self):
-        data = self._toPost('CAPTURE_PRIOR_AUTH')
+        data = self._toPost('PRIOR_AUTH_CAPTURE')
         response = self.conn.send(data)
         return self._fromPost(response)
 
