@@ -78,7 +78,7 @@ class Recurring(object):
         etree.SubElement(auth, "name").text = self.login
         etree.SubElement(auth, "transactionKey").text = self.key
         if self.subscription_id:
-            etree.SubElement(root, 'subscriptionId').text = self.subscription_id
+            etree.SubElement(root, 'subscriptionId').text = str(self.subscription_id)
         if requestType != 'ARBCancelSubscriptionRequest':
             subscription = etree.SubElement(root, 'subscription')
             if self.schedule:
