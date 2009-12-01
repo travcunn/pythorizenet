@@ -1,7 +1,4 @@
-try:
-    import lxml
-except ImportError:
-    raise ImportError('pythorizenet reqires lxml')
+import lxml
 
 try:
     import hashlib
