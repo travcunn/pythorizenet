@@ -8,7 +8,7 @@ PACKAGE = "pythorizenet"
 def main():
     kwargs = {
         'name'                    : "%s" % PACKAGE,
-        'version'                 : "1.0",
+        'version'                 : "1.1",
         'description'             : "Python classes for the Authorize.net AIM and ARB APIs.",
         'author'                  : "Ben Timby",
         'author_email'            : "btimby@ftphosting.net",
@@ -19,7 +19,7 @@ def main():
         'platforms'               : "UNIX",
         'long_description'        : "AIM and ARB API interfaces for performing real-time credit card authorizations/captures as well as automated recurring billing.",
         'packages'                : ['pythorizenet'],
-        'install_requires'        : ['python-lxml >= 1.3.4'],
+        'install_requires'        : ['lxml >= 1.3.4'],
     }
     setup(**kwargs)
 
