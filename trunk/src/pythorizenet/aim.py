@@ -1,7 +1,8 @@
+#!/usr/bin/env python
+
 from com import AuthorizeNet
 import httplib
 import urllib
-import md5
 
 TYPE_CREDIT = 'credit'
 FIELD_DELIM = '|'
@@ -59,7 +60,7 @@ class TransactionResult(object):
 
     def validate(self, login, salt):
         value = ''.join([salt, login, self.transaction_id, self.amount])
-        return self.hash.upper() == md5.new(value).hexdigest().upper()
+        return self.hash.upper() == make_md5(value).hexdigest().upper()
 
 class Transaction(object):
     class Options(object):
@@ -158,6 +159,8 @@ class Transaction(object):
                     post['x_state'] = state
                 if zip:
                     post['x_zip'] = zip
+        for name, value in post.items():
+            post[name] = value.encode('utf-8')
         return urllib.urlencode(post)
 
     def _fromPost(self, data):
@@ -196,7 +199,7 @@ if __name__ == '__main__':
     trans.add_options(is_test=True)
     trans.add_amount('1.00')
     trans.add_credit('4222222222222', ('2010', '03'))
-    trans.add_customer('john', 'smith')
+    trans.add_customer('john', u'Bolidenv\xe4gen')
     result = trans.authorize()
     void = Transaction(HOST_PROD, sys.argv[1], sys.argv[2])
     void.add_transaction(result.transaction_id)
