@@ -60,7 +60,7 @@ class TransactionResult(object):
 
     def validate(self, login, salt):
         value = ''.join([salt, login, self.transaction_id, self.amount])
-        return self.hash.upper() == make_md5(value).hexdigest().upper()
+        return self.hash.upper() == md5(value).hexdigest().upper()
 
 class Transaction(object):
     class Options(object):
