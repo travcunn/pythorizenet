@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 
-from com import AuthorizeNet
-import httplib
-import urllib
+from pythorizenet import AuthorizeNet, identify_card_type, HOST_PROD, HOST_TEST
+import httplib, urllib
 
-TYPE_CREDIT = 'credit'
 FIELD_DELIM = '|'
 RESPONSE_CODES = {
     '1': 'approved',
@@ -13,32 +11,6 @@ RESPONSE_CODES = {
     '4': 'held for review'
 }
 TESTING_PREFIX = '(TESTMODE) '
-AMEX = 'AMEX'
-DISCOVER = 'Discover'
-MASTERCARD = 'MasterCard'
-VISA = 'Visa'
-UNKNOWN_CARD_TYPE = 'Unknown'
-HOST_PROD = 'secure.authorize.net'
-HOST_TEST = 'test.authorize.net'
-
-def identify_card_type(card_num):
-    card_len = len(card_num)
-    card_type = UNKNOWN_CARD_TYPE
-    card_1_digit = card_num[0]
-    card_2_digits = card_num[:2]
-    card_4_digits = card_num[:4]
-    if (card_len == 15) and card_2_digits in ('34', '37'):
-        card_type = AMEX
-    elif card_len == 16:
-        if card_2_digits in ('51', '52', '53', '54', '55'):
-            card_type = MASTERCARD
-        elif (card_4_digits == '6011') or (card_2_digits == '65'):
-            card_type = DISCOVER
-        elif (card_1_digit == '4'):
-            card_type = VISA
-    elif (card_len == 13) and (card_1_digit == '4'):
-        card_type = VISA
-    return card_type
 
 class TransactionResult(object):
     def __init__(self, data, delim=FIELD_DELIM):
@@ -63,9 +35,6 @@ class TransactionResult(object):
         return self.hash.upper() == md5(value).hexdigest().upper()
 
 class Transaction(object):
-    class Options(object):
-        pass
-
     def __init__(self, host, login, key):
         self.conn = AuthorizeNet(host, '/gateway/transact.dll', 'application/x-www-form-urlencoded')
         self.login = login
@@ -74,15 +43,17 @@ class Transaction(object):
         self.amount = None
         self.payment = None
         self.customer = None
-        self.options = Transaction.Options()
-        self.add_options()
+        self.is_test = False
+        self.require_ccv = False
+        self.require_avs = False
+        self.duplicate_window = None
 
     def add_amount(self, amount):
         if not isinstance(amount, str):
             raise Exception('You must provide the amount as a string!')
         self.amount = amount
 
-    def add_credit(self, card_num, card_exp, card_code=None):
+    def set_credit(self, card_num, card_exp, card_code=None):
         if not isinstance(card_exp, (tuple, list)):
             raise Exception('card_exp must be a tuple or list!')
         if len(card_exp) != 2:
@@ -95,17 +66,23 @@ class Transaction(object):
             raise Exception('Second item of card_exp must be month as MM!')
         self.payment = (TYPE_CREDIT, card_num, tuple(card_exp), card_code)
 
-    def add_customer(self, first_name, last_name, company=None, address=None, city=None, state=None, zip=None):
+    def set_customer(self, first_name, last_name, company=None, address=None, city=None, state=None, zip=None):
         self.customer = (first_name, last_name, company, address, city, state, zip)
 
-    def add_transaction(self, id):
+    def set_transaction_id(self, id):
         self.trans_id = id
 
-    def add_options(self, is_test=False, require_ccv=False, require_avs=False, duplicate_window=None):
-        setattr(self.options, 'is_test', is_test)
-        setattr(self.options, 'require_ccv', require_ccv)
-        setattr(self.options, 'require_avs', require_avs)
-        setattr(self.options, 'duplicate_window', duplicate_window)
+    def set_is_test(self, is_test=False):
+        self.is_test = is_test
+
+    def set_require_ccv(self, require_ccv=False):
+        self.require_ccv = require_ccv
+
+    def set_require_avs(self, require_avs=False):
+        self.require_avs = require_avs
+
+    def set_duplicate_window(self, duplicate_window=None):
+        self.duplicate_window = duplicate_window
 
     def _toPost(self, requestType):
         post = {
@@ -130,14 +107,14 @@ class Transaction(object):
                     'x_exp_date': '%s-%s' % exp_date
                 }
             )
-            if self.options.require_ccv:
+            if self.require_ccv:
                 if not ccv:
                     raise Exception('CCV required by options but not provided!')
                 post['x_card_code'] = ccv
-        if self.options.is_test:
+        if self.is_test:
             post['x_test_request'] = 'YES'
-        if self.options.duplicate_window is not None:
-            post['x_duplicate_window'] = str(self.options.duplicate_window)
+        if self.duplicate_window is not None:
+            post['x_duplicate_window'] = str(self.duplicate_window)
         if requestType in ('CREDIT', 'PRIOR_AUTH_CAPTURE', 'VOID'):
             if not self.trans_id:
                 raise Exception('You must provide a trans_id for %s transactions!' % requestType)
@@ -146,7 +123,7 @@ class Transaction(object):
             (first_name, last_name, company, address, city, state, zip) = self.customer
             post['x_first_name'] = first_name
             post['x_last_name'] = last_name
-            if self.options.require_avs:
+            if self.require_avs:
                 if not (address and city and state and zip):
                     raise Exception('AVS required by options but no customer data provided!')
                 if company:
@@ -196,12 +173,12 @@ if __name__ == '__main__':
         sys.exit()
     import pdb; pdb.set_trace()
     trans = Transaction(HOST_PROD, sys.argv[1], sys.argv[2])
-    trans.add_options(is_test=True)
-    trans.add_amount('1.00')
-    trans.add_credit('4222222222222', ('2010', '03'))
-    trans.add_customer('john', u'Bolidenv\xe4gen')
+    trans.set_options(is_test=True)
+    trans.set_amount('1.00')
+    trans.set_credit('4222222222222', ('2010', '03'))
+    trans.set_customer('john', u'Bolidenv\xe4gen')
     result = trans.authorize()
     void = Transaction(HOST_PROD, sys.argv[1], sys.argv[2])
-    void.add_transaction(result.transaction_id)
+    void.set_transaction(result.transaction_id)
     result = void.void()
     

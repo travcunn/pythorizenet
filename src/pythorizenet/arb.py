@@ -1,20 +1,16 @@
 import datetime
 from lxml import etree
-from com import AuthorizeNet
+from pythorizenet import AuthorizeNet, TYPE_CREDIT, HOST_PROD, HOST_TEST
 
 UNIT_MONTH = 'months'
 UNIT_DAYS = 'days'
 
-TYPE_CREDIT = 'credit'
-
 PERIOD_ONGOING = 9999
 
-HOST_PROD = 'api.authorize.net'
-HOST_TEST = 'apitest.authorize.net'
 PATH = '/xml/v1/request.api'
 ANET_XMLNS = ' xmlns="AnetApi/xml/v1/schema/AnetApiSchema.xsd"'
 
-class RecurringResult:
+class RecurringResult(object):
     def __init__(self, data):
         root = etree.XML(data)
         messages = root.find('messages')
@@ -38,22 +34,18 @@ class Recurring(object):
         self.customer = None
         self.subscription_id = None
 
-    def add_schedule(self, period=PERIOD_ONGOING, start=None, count=1, unit=UNIT_MONTH):
-        if not start:
+    def set_schedule(self, period=PERIOD_ONGOING, start=None, count=1, unit=UNIT_MONTH):
+        if start is None:
             start = datetime.datetime.now()
         self.schedule = (start, period, count, unit)
 
-    def add_amount(self, amount):
-        if not isinstance(amount, str):
-            raise Exception('You must provide the amount as a string!')
-        self.amount = amount
+    def set_amount(self, amount):
+        self.amount = str(amount)
 
-    def add_trial(self, trialPeriod, trialAmount):
-        if not isinstance(trialAmount, str):
-            raise Exception('You must provide the trial amount as a string!')
-        self.trial = (trialPeriod, trialAmount)
+    def set_trial(self, trialPeriod, trialAmount):
+        self.trial = (trialPeriod, str(trialAmount))
 
-    def add_credit(self, card_num, card_exp):
+    def set_credit(self, card_num, card_exp):
         if not isinstance(card_exp, (tuple, list)):
             raise Exception('card_exp must be a tuple or list!')
         if len(card_exp) != 2:
@@ -66,14 +58,14 @@ class Recurring(object):
             raise Exception('Second item of card_exp must be month as MM!')
         self.payment = (TYPE_CREDIT, (card_num, tuple(card_exp)))
 
-    def add_customer(self, first_name, last_name, company=None, address=None, city=None, state=None, zip=None, country=None):
+    def set_customer(self, first_name, last_name, company=None, address=None, city=None, state=None, zip=None, country=None):
         self.customer = (first_name, last_name, company, address, city, state, zip, country)
 
-    def add_subscription_id(self, subscription_id):
+    def set_subscription_id(self, subscription_id):
         self.subscription_id = subscription_id
 
     def _toXml(self, requestType):
-        root = etree.Element(requestType, xmlns="AnetApi/xml/v1/schema/AnetApiSchema.xsd")
+        root = etree.Element(requestType, xmlns=ANET_XMLNS)
         auth = etree.SubElement(root, "merchantAuthentication")
         etree.SubElement(auth, "name").text = self.login
         etree.SubElement(auth, "transactionKey").text = self.key
@@ -151,15 +143,15 @@ if __name__ == '__main__':
         sys.exit()
     import pdb; pdb.set_trace()
     create = Recurring(HOST_PROD, sys.argv[1], sys.argv[2])
-    create.add_schedule()
-    create.add_amount('10.00')
+    create.set_schedule()
+    create.set_amount('10.00')
     #create.add_credit('4427802718148774', ('2010', '03'))
-    create.add_credit('4222222222222', ('2011', '03'))
-    create.add_customer('john', 'smith')
+    create.set_credit('4222222222222', ('2011', '03'))
+    create.set_customer('john', 'smith')
     result = create.create()
     update = Recurring(HOST_PROD, sys.argv[1], sys.argv[2])
-    update.add_subscription_id(result.subscription_id)
-    update.add_amount('20.00')
+    update.set_subscription_id(result.subscription_id)
+    update.set_amount('20.00')
     update.update()
     #cancel = Recurring(HOST_PROD, sys.argv[1], sys.argv[2])
     #cancel.add_subscription_id(result.subscription_id)
