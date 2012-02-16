@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from pythorizenet import AuthorizeNet, identify_card_type, HOST_PROD, HOST_TEST
+from pythorizenet import AuthorizeNet, identify_card_type, HOST_PROD, HOST_TEST, TYPE_CREDIT
 import httplib, urllib
 
 FIELD_DELIM = '|'
@@ -48,7 +48,7 @@ class Transaction(object):
         self.require_avs = False
         self.duplicate_window = None
 
-    def add_amount(self, amount):
+    def set_amount(self, amount):
         if not isinstance(amount, str):
             raise Exception('You must provide the amount as a string!')
         self.amount = amount
@@ -175,7 +175,7 @@ if __name__ == '__main__':
         sys.exit()
     import pdb; pdb.set_trace()
     trans = Transaction(HOST_PROD, sys.argv[1], sys.argv[2])
-    trans.set_options(is_test=True)
+    trans.set_is_test(True)
     trans.set_amount('1.00')
     trans.set_credit('4222222222222', ('2010', '03'))
     trans.set_customer('john', u'Bolidenv\xe4gen')
