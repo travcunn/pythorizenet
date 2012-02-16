@@ -10,7 +10,7 @@ PERIOD_ONGOING = 9999
 HOST_PROD = 'api.authorize.net'
 HOST_TEST = 'apitest.authorize.net'
 PATH = '/xml/v1/request.api'
-ANET_XMLNS = ' xmlns="AnetApi/xml/v1/schema/AnetApiSchema.xsd"'
+ANET_XMLNS = 'AnetApi/xml/v1/schema/AnetApiSchema.xsd'
 
 class RecurringResult(object):
     def __init__(self, data):
