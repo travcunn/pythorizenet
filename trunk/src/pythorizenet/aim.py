@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from pythorizenet import AuthorizeNet, identify_card_type, HOST_PROD, HOST_TEST, TYPE_CREDIT
+from pythorizenet import AuthorizeNet, identify_card_type, TYPE_CREDIT
 import httplib, urllib
 
 FIELD_DELIM = '|'
@@ -11,6 +11,8 @@ RESPONSE_CODES = {
     '4': 'held for review'
 }
 TESTING_PREFIX = '(TESTMODE) '
+HOST_PROD = 'secure.authorize.net'
+HOST_TEST = 'secure.authorize.net'
 
 class TransactionResult(object):
     def __init__(self, data, delim=FIELD_DELIM):
@@ -181,6 +183,6 @@ if __name__ == '__main__':
     trans.set_customer('john', u'Bolidenv\xe4gen')
     result = trans.authorize()
     void = Transaction(HOST_PROD, sys.argv[1], sys.argv[2])
-    void.set_transaction(result.transaction_id)
+    void.set_transaction_id(result.transaction_id)
     result = void.void()
     
