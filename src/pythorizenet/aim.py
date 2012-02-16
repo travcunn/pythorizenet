@@ -66,8 +66,8 @@ class Transaction(object):
             raise Exception('Second item of card_exp must be month as MM!')
         self.payment = (TYPE_CREDIT, card_num, tuple(card_exp), card_code)
 
-    def set_customer(self, first_name, last_name, company=None, address=None, city=None, state=None, zip=None):
-        self.customer = (first_name, last_name, company, address, city, state, zip)
+    def set_customer(self, first_name, last_name, company=None, address=None, city=None, state=None, zip=None, ip=None):
+        self.customer = (first_name, last_name, company, address, city, state, zip, ip)
 
     def set_transaction_id(self, id):
         self.trans_id = id
@@ -120,7 +120,7 @@ class Transaction(object):
                 raise Exception('You must provide a trans_id for %s transactions!' % requestType)
             post['x_trans_id'] = self.trans_id
         if self.customer:
-            (first_name, last_name, company, address, city, state, zip) = self.customer
+            (first_name, last_name, company, address, city, state, zip, ip) = self.customer
             post['x_first_name'] = first_name
             post['x_last_name'] = last_name
             if self.require_avs:
@@ -136,6 +136,8 @@ class Transaction(object):
                     post['x_state'] = state
                 if zip:
                     post['x_zip'] = zip
+                if ip:
+                    post['x_customer_ip'] = ip
         for name, value in post.items():
             post[name] = value.encode('utf-8')
         return urllib.urlencode(post)
