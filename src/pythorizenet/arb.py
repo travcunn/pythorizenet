@@ -1,12 +1,14 @@
 import datetime
 from lxml import etree
-from pythorizenet import AuthorizeNet, TYPE_CREDIT, HOST_PROD, HOST_TEST
+from pythorizenet import AuthorizeNet, TYPE_CREDIT
 
 UNIT_MONTH = 'months'
 UNIT_DAYS = 'days'
 
 PERIOD_ONGOING = 9999
 
+HOST_PROD = 'api.authorize.net'
+HOST_TEST = 'apitest.authorize.net'
 PATH = '/xml/v1/request.api'
 ANET_XMLNS = ' xmlns="AnetApi/xml/v1/schema/AnetApiSchema.xsd"'
 
