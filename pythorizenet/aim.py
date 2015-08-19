@@ -11,8 +11,8 @@ RESPONSE_CODES = {
     '4': 'held for review'
 }
 TESTING_PREFIX = '(TESTMODE) '
-HOST_PROD = 'secure.authorize.net'
-HOST_TEST = 'secure.authorize.net'
+HOST_PROD = 'secure2.authorize.net'
+HOST_TEST = 'secure2.authorize.net'
 
 class TransactionResult(object):
     def __init__(self, data, delim=FIELD_DELIM):

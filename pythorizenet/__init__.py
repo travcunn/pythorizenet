@@ -7,7 +7,7 @@ except ImportError:
     from md5 import new as md5
 
 TYPE_CREDIT = 'credit'
-HOST_PROD = 'secure.authorize.net'
+HOST_PROD = 'secure2.authorize.net'
 HOST_TEST = 'apitest.authorize.net'
 AMEX = 'AMEX'
 DISCOVER = 'Discover'

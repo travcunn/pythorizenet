@@ -7,7 +7,7 @@ UNIT_DAYS = 'days'
 
 PERIOD_ONGOING = 9999
 
-HOST_PROD = 'api.authorize.net'
+HOST_PROD = 'api2.authorize.net'
 HOST_TEST = 'apitest.authorize.net'
 PATH = '/xml/v1/request.api'
 ANET_XMLNS = 'AnetApi/xml/v1/schema/AnetApiSchema.xsd'

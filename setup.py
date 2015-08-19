@@ -8,13 +8,13 @@ PACKAGE = "pythorizenet"
 def main():
     kwargs = {
         'name'                    : "%s" % PACKAGE,
-        'version'                 : "1.1",
+        'version'                 : "2.0",
         'description'             : "Python classes for the Authorize.net AIM and ARB APIs.",
         'author'                  : "Ben Timby",
         'author_email'            : "btimby@ftphosting.net",
-        'maintainer'              : "Ben Timby",
-        'maintainer_email'        : "btimby@ftphosting.net",
-        'url'                     : "http://www.ftphosting.net/",
+        'maintainer'              : "Travis Cunningham",
+        'maintainer_email'        : "tech@smartfile.com",
+        'url'                     : "https://www.smartfile.com",
         'license'                 : "GPL",
         'platforms'               : "UNIX",
         'long_description'        : "AIM and ARB API interfaces for performing real-time credit card authorizations/captures as well as automated recurring billing.",
