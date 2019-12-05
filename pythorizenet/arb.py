@@ -141,7 +141,7 @@ class Recurring(object):
 if __name__ == '__main__':
     import sys
     if len(sys.argv) != 3:
-        print 'You must provide your login and trans id as parameters!'
+        print('You must provide your login and trans id as parameters!')
         sys.exit()
     import pdb; pdb.set_trace()
     create = Recurring(HOST_PROD, sys.argv[1], sys.argv[2])

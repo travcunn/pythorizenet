@@ -1,5 +1,5 @@
 import lxml
-import httplib
+import http.client
 
 try:
     from hashlib import md5
@@ -37,7 +37,7 @@ def identify_card_type(card_num):
 def generate_hash(*args):
     """generate_hash(hash_key, trans_id, amount)"""
     m = md5()
-    map(m.update, args)
+    list(map(m.update, args))
     return m.hexdigest().upper()
 
 class AuthorizeNet(object):
@@ -47,7 +47,7 @@ class AuthorizeNet(object):
         self.mime = mime
 
     def send(self, data):
-        conn = httplib.HTTPSConnection(self.host)
+        conn = http.client.HTTPSConnection(self.host)
         conn.putrequest('POST', self.path)
         conn.putheader('content-type', self.mime)
         conn.putheader('content-length', len(data))

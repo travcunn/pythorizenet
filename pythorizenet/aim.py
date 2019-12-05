@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from pythorizenet import AuthorizeNet, identify_card_type, TYPE_CREDIT
-import httplib, urllib
+import http.client, urllib.request, urllib.parse, urllib.error
 
 FIELD_DELIM = '|'
 RESPONSE_CODES = {
@@ -140,9 +140,9 @@ class Transaction(object):
                     post['x_zip'] = zip
                 if ip:
                     post['x_customer_ip'] = ip
-        for name, value in post.items():
+        for name, value in list(post.items()):
             post[name] = value.encode('utf-8')
-        return urllib.urlencode(post)
+        return urllib.parse.urlencode(post)
 
     def _fromPost(self, data):
         return TransactionResult(data, self.delimiter)
@@ -173,14 +173,14 @@ class Transaction(object):
 if __name__ == '__main__':
     import sys
     if len(sys.argv) != 3:
-        print 'You must provide your login and trans id as parameters!'
+        print('You must provide your login and trans id as parameters!')
         sys.exit()
     import pdb; pdb.set_trace()
     trans = Transaction(HOST_PROD, sys.argv[1], sys.argv[2])
     trans.set_is_test(True)
     trans.set_amount('1.00')
     trans.set_credit('4222222222222', ('2010', '03'))
-    trans.set_customer('john', u'Bolidenv\xe4gen')
+    trans.set_customer('john', 'Bolidenv\xe4gen')
     result = trans.authorize()
     void = Transaction(HOST_PROD, sys.argv[1], sys.argv[2])
     void.set_transaction_id(result.transaction_id)

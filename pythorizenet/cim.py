@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from pythorizenet import AuthorizeNet, HOST_PROD, HOST_TEST
-import httplib, urllib
+import http.client, urllib.request, urllib.parse, urllib.error
 
 PATH = '/xml/v1/request.api'
 ANET_XMLNS = ' xmlns="AnetApi/xml/v1/schema/AnetApiSchema.xsd"'
@@ -163,7 +163,7 @@ class Customer(object):
 if __name__ == '__main__':
     import sys
     if len(sys.argv) != 3:
-        print 'You must provide your login and trans id as parameters!'
+        print('You must provide your login and trans id as parameters!')
         sys.exit()
     import pdb; pdb.set_trace()
     create = Customer(HOST_PROD, sys.argv[1], sys.argv[2])
